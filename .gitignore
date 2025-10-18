@@ -1,0 +1,13 @@
+# Backend
+invoice-backend/node_modules/
+invoice-backend/dist/
+invoice-backend/.env
+
+# Frontend
+invoice-frontend/node_modules/
+invoice-frontend/dist/
+invoice-frontend/.env
+
+# DB Script
+DB Script/*.sql.bak
+DB Script/*.dump
