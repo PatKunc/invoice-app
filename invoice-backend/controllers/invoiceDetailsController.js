@@ -20,7 +20,7 @@ export class InvoiceDetailsController {
     }
 
     addDetails (req,res){
-        const { date, loading, returning, freight, toll, gas, extra_expense, remark, invoice_id, customer_id, driver_advance } = req.body
+        const { date, loading, returning, freight, toll, gas, extra_expense, remark, invoice_id, customer_id, driver_advance, destination } = req.body
 
         // ตรวจสอบค่า required
         if (!invoice_id || !customer_id || !date) {
@@ -29,11 +29,11 @@ export class InvoiceDetailsController {
 
         const sql = `
             INSERT INTO invoices_details
-            (date, loading, returning, freight, toll, gas, extra_expense, remark, invoice_id, customer_id,driver_advance)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (date, loading, returning, freight, toll, gas, extra_expense, remark, invoice_id, customer_id,driver_advance, destination)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
         `
 
-        db.query(sql, [date, loading || '', returning || '', freight || 0, toll || 0, gas || 0, extra_expense || 0, remark || '', invoice_id, customer_id, driver_advance], (err, result) => {
+        db.query(sql, [date, loading || '', returning || '', freight || 0, toll || 0, gas || 0, extra_expense || 0, remark || '', invoice_id, customer_id, driver_advance, destination], (err, result) => {
             if (err) return res.status(500).json({ error: err.message })
 
             res.json({
@@ -49,7 +49,8 @@ export class InvoiceDetailsController {
             remark,
             invoice_id,
             customer_id,
-            driver_advance
+            driver_advance,
+            destination
             })
         })
     }
@@ -76,7 +77,7 @@ export class InvoiceDetailsController {
 
     updateDetails(req,res) {
         const { id } = req.params
-        const { date, loading, returning, freight, toll, gas, extra_expense, remark, customer_id, driver_advance } = req.body
+        const { date, loading, returning, freight, toll, gas, extra_expense, remark, customer_id, driver_advance, destination } = req.body
 
         if (!id) return res.status(400).json({ error: 'id is required' })
 
@@ -92,7 +93,8 @@ export class InvoiceDetailsController {
             extra_expense = ?, 
             remark = ?, 
             customer_id = ?, 
-            driver_advance = ?
+            driver_advance = ?,
+            destination = ?
             WHERE id = ?
         `
 
@@ -107,6 +109,7 @@ export class InvoiceDetailsController {
             remark || '-', 
             customer_id, 
             driver_advance || 0,
+            destination,
             id
         ]
 

@@ -24,6 +24,7 @@ export default function EditInvoice() {
   const [extraExpense, setExtraExpense] = useState('')
   const [remark, setRemark] = useState('')
   const [driverAdvance, setDriverAdvance] = useState(0)
+  const [destination, setDestination] = useState('')
 
   // Alert
   const [alertMsg, setAlertMsg] = useState('')
@@ -131,7 +132,8 @@ export default function EditInvoice() {
           gas,
           extra_expense: extraExpense,
           remark,
-          driver_advance: driverAdvanceValue  // ✅ ใช้ตัวแปรนี้แทน
+          driver_advance: driverAdvanceValue,  // ✅ ใช้ตัวแปรนี้แทน
+          destination: destination
         })
       })
       const data = await res.json()
@@ -142,7 +144,7 @@ export default function EditInvoice() {
 
       // reset form
       setDate(''); setCustomer(''); setCustomerName(''); setLoadingLoc(''); setReturningLoc('')
-      setFreight(''); setToll(''); setGas(''); setExtraExpense(0); setRemark(''); setDriverAdvance(0)
+      setFreight(''); setToll(''); setGas(''); setExtraExpense(0); setRemark(''); setDriverAdvance(0); setDestination('');
       fetchDetails()
     } catch (err) {
       console.error(err)
@@ -179,7 +181,8 @@ const handleOpenEdit = (item) => {
     gas: item.gas || '',
     extra_expense: item.extra_expense || '',
     remark: item.remark || '',
-    driver_advance: item.driver_advance || ''
+    driver_advance: item.driver_advance || '',
+    destination: item.destination || ''
   })
   setShowEditModal(true)
 }
@@ -285,6 +288,7 @@ const handleUpdateDetail = async () => {
               <th className="py-2 px-4 text-left">ลูกค้า</th>
               <th className="py-2 px-4 text-left">รับตู้</th>
               <th className="py-2 px-4 text-left">คืนตู้</th>
+              <th className="py-2 px-4 text-left">ส่งของ</th>
               <th className="py-2 px-4 text-right">ค่าบรรทุก</th>
               <th className="py-2 px-4 text-right">ค่าทางด่วน</th>
               <th className="py-2 px-4 text-right">ค่าก๊าซ</th>
@@ -301,6 +305,7 @@ const handleUpdateDetail = async () => {
                 <td className="py-2 px-4">{d.customer_name}</td>
                 <td className="py-2 px-4">{d.loading}</td>
                 <td className="py-2 px-4">{d.returning}</td>
+                <td className="py-2 px-4">{d.destination}</td>
                 <td className="py-2 px-4 text-right">{parseFloat(d.freight).toLocaleString()}</td>
                 <td className="py-2 px-4 text-right">{parseFloat(d.toll).toLocaleString()}</td>
                 <td className="py-2 px-4 text-right">{parseFloat(d.gas).toLocaleString()}</td>
@@ -320,7 +325,7 @@ const handleUpdateDetail = async () => {
               </tr>
             )) : (
               <tr>
-                <td colSpan="11" className="py-2 px-4 text-center text-gray-500">ยังไม่มีรายละเอียด</td>
+                <td colSpan="12" className="py-2 px-4 text-center text-gray-500">ยังไม่มีรายละเอียด</td>
               </tr>
             )}
           </tbody>
@@ -337,6 +342,7 @@ const handleUpdateDetail = async () => {
             </div>
             <p className="text-sm text-gray-600"><b>รับ:</b> {d.loading}</p>
             <p className="text-sm text-gray-600"><b>คืน:</b> {d.returning}</p>
+            <p className="text-sm text-gray-600"><b>ส่งของ:</b> {d.destination}</p>
             <div className="grid grid-cols-2 text-sm text-gray-700 mt-2">
               <p><b>ค่าบรรทุก:</b> {d.freight}฿</p>
               <p><b>ค่าน้ำมัน:</b> {d.gas}฿</p>
@@ -411,6 +417,8 @@ const handleUpdateDetail = async () => {
             <input type="text" value={loadingLoc} onChange={e => setLoadingLoc(e.target.value)} className="w-full border rounded p-2 mb-2"/>
             <label className="block mb-2 text-sm">คืนตู้</label>
             <input type="text" value={returningLoc} onChange={e => setReturningLoc(e.target.value)} className="w-full border rounded p-2 mb-2"/>
+            <label className="block mb-2 text-sm">ส่งของ</label>
+            <input type="text" value={destination} onChange={e => setDestination(e.target.value)} className="w-full border rounded p-2 mb-2"/>
             <label className="block mb-2 text-sm">ค่าบรรทุก</label>
             <input type="number" value={freight} onChange={e => setFreight(e.target.value)} className="w-full border rounded p-2 mb-2"/>
             <label className="block mb-2 text-sm">ค่าทางด่วน</label>
@@ -454,6 +462,12 @@ const handleUpdateDetail = async () => {
               <input type="text" 
                 value={editData.returning} 
                 onChange={e => setEditData({ ...editData, returning: e.target.value })} 
+                className="w-full border rounded p-2 mb-2"/>
+
+              <label className="block mb-2 text-sm">ส่งของ</label>
+              <input type="text" 
+                value={editData.destination} 
+                onChange={e => setEditData({ ...editData, destination: e.target.value })} 
                 className="w-full border rounded p-2 mb-2"/>
 
               <label className="block mb-2 text-sm">ค่าบรรทุก</label>
