@@ -11,7 +11,7 @@ function TruckSelect() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/trucks')
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/api/trucks`)
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok')
         return res.json()

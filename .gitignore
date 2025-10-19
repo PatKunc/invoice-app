@@ -6,7 +6,7 @@ invoice-backend/.env
 # Frontend
 invoice-frontend/node_modules/
 invoice-frontend/dist/
-invoice-frontend/.env
+
 
 # DB Script
 DB Script/*.sql.bak

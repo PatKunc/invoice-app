@@ -22,7 +22,7 @@ export default function AddInvoice() {
 
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoices/byTruck/${truckId}`)
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoices/byTruck/${truckId}`)
       const data = await res.json()
       setTruckData(data)
       setLoading(false)
@@ -45,7 +45,7 @@ export default function AddInvoice() {
     const monthStr = `${selectedYear}-${selectedMonth}-01`
 
     try {
-      const res = await fetch('http://localhost:5000/api/invoices/add', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoices/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,7 +76,7 @@ export default function AddInvoice() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoices/delete/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoices/delete/${id}`, {
         method: 'DELETE'
       })
       if (!res.ok) throw new Error('ลบไม่สำเร็จ')

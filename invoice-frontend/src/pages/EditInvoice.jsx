@@ -53,7 +53,7 @@ export default function EditInvoice() {
 
   const fetchInvoiceInfo = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoices/get/withTruck/${invoiceId}`)
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoices/get/withTruck/${invoiceId}`)
       const data = await res.json()
       setInvoiceInfo(data)
     } catch (err) {
@@ -64,7 +64,7 @@ export default function EditInvoice() {
 
   const fetchDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoiceDetails/${invoiceId}`)
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/${invoiceId}`)
       const data = await res.json()
       setDetails(data)
       setLoading(false)
@@ -84,7 +84,7 @@ export default function EditInvoice() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/invoiceDetails/delete/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/delete/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('ลบไม่สำเร็จ')
       showAlertMsg('ลบเรียบร้อย', 'success')
       setConfirmDelete({ show: false, id: null })
@@ -102,7 +102,7 @@ export default function EditInvoice() {
     try {
       // ถ้าเลือก option “เพิ่มลูกค้าใหม่” หรือไม่ได้เลือก dropdown => เพิ่มลูกค้าใหม่
       if (!customerId) {
-        const resAddCustomer = await fetch(`http://localhost:5000/api/customer/add`, {
+        const resAddCustomer = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customer/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: customerName.trim() })
@@ -117,7 +117,7 @@ export default function EditInvoice() {
       const driverAdvanceValue = driverAdvance === '' ? 0 : parseFloat(driverAdvance)
 
       // เพิ่ม detail
-      const res = await fetch(`http://localhost:5000/api/invoiceDetails/add`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +157,7 @@ export default function EditInvoice() {
       return
     }
     const delayDebounce = setTimeout(() => {
-      fetch(`http://localhost:5000/api/customer/${customerName}`)
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customer/${customerName}`)
         .then(res => res.json())
         .then(data => setSuggestions(data))
         .catch(err => console.error(err))
@@ -188,7 +188,7 @@ const handleExportExcel = async () => {
   if (!invoiceInfo) return showAlertMsg('โหลดข้อมูล Invoice ไม่สำเร็จ', 'error')
 
   try {
-    const res = await fetch(`http://localhost:5000/api/excel/export/${invoiceId}`)
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/excel/export/${invoiceId}`)
     if (!res.ok) throw new Error('Export Excel ล้มเหลว')
 
     const blob = await res.blob()
@@ -216,7 +216,7 @@ const handleUpdateDetail = async () => {
   if (!editData) return
 
   try {
-    const res = await fetch(`http://localhost:5000/api/invoiceDetails/updateDetails/${editData.id}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/updateDetails/${editData.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editData)
