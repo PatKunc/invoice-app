@@ -73,6 +73,8 @@ export const exportDetailsToExcel = async (req, res) => {
       const totalExpense = totalToll + totalGas + totalExtra
       const remaining = totalFreight - totalExpense
       const driverIncome = (totalFreight - totalToll) * 0.16
+      const driverNetIncome = driverIncome + totalExtra
+
 
       worksheet.addRow([])
       worksheet.addRow({ loading: 'รวมค่าขนส่งทั้งหมด', freight: totalFreight })
@@ -82,6 +84,7 @@ export const exportDetailsToExcel = async (req, res) => {
       worksheet.addRow({ loading: 'รวมค่าใช้จ่ายทั้งหมด', freight: totalExpense })
       worksheet.addRow({ loading: 'คงเหลือ (รายได้สุทธิ)', freight: remaining })
       worksheet.addRow({ loading: 'รายได้พนักงานขับ (16%)', freight: driverIncome })
+      worksheet.addRow({ loading: 'รายได้คนขับสุทธิ', freight: driverNetIncome })
 
       // จัดฟอร์แมตส่วนสรุป
       const summaryStartRow = details.length + 3

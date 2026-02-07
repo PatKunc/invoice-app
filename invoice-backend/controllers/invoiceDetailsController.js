@@ -77,7 +77,7 @@ export class InvoiceDetailsController {
 
     updateDetails(req,res) {
         const { id } = req.params
-        const { date, loading, returning, freight, toll, gas, extra_expense, remark, customer_id, driver_advance, destination } = req.body
+        const { date, loading, customer_id, returning, freight, toll, gas, extra_expense, remark, driver_advance, destination } = req.body
 
         if (!id) return res.status(400).json({ error: 'id is required' })
 
@@ -86,13 +86,13 @@ export class InvoiceDetailsController {
             SET 
             date = ?, 
             loading = ?, 
+            customer_id = ?,
             returning = ?, 
             freight = ?, 
             toll = ?, 
             gas = ?, 
             extra_expense = ?, 
             remark = ?, 
-            customer_id = ?, 
             driver_advance = ?,
             destination = ?
             WHERE id = ?
@@ -101,13 +101,13 @@ export class InvoiceDetailsController {
         const params = [
             date, 
             loading, 
+            customer_id,
             returning, 
             freight, 
             toll, 
             gas, 
             extra_expense, 
-            remark || '-', 
-            customer_id, 
+            remark, 
             driver_advance || 0,
             destination,
             id

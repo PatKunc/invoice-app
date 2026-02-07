@@ -168,22 +168,50 @@ export default function EditInvoice() {
   }, [customerName])
 
     const [showEditModal, setShowEditModal] = useState(false)
+
 const [editData, setEditData] = useState(null)
 
 const handleOpenEdit = (item) => {
+  // สร้าง Object Date จากค่าที่ได้จาก DB
+  const localDate = new Date(item.date);
+  
+  // ดึงปี-เดือน-วันที่ ตามเวลาเครื่องผู้ใช้ (Local Time)
+  const formattedDate = localDate.toLocaleDateString('en-CA'); // จะได้ฟอร์แมต YYYY-MM-DD พอดี
+
+  // setEditData({
+  //   id: item.id,
+  //   date: formattedDate,
+  //   loading: item.loading || '',
+  //   customer_name: item.customer_name || '',
+  //   customer_id: item.customer_id || '',
+  //   returning: item.returning || '',
+  //   freight: item.freight || 0,
+  //   toll: item.toll || 0,
+  //   gas: item.gas || 0,
+  //   extra_expense: item.extra_expense || 0,
+  //   remark: item.remark || '',
+  //   driver_advance: item.driver_advance || '',
+  //   destination: item.destination || ''
+  // })
+  // setShowEditModal(true)
   setEditData({
     id: item.id,
-    date: item.date.split('T')[0],
+    date: formattedDate,
     loading: item.loading || '',
     returning: item.returning || '',
-    freight: item.freight || '',
-    toll: item.toll || '',
-    gas: item.gas || '',
-    extra_expense: item.extra_expense || '',
+    freight: item.freight || 0,
+    toll: item.toll || 0,
+    gas: item.gas || 0,
+    extra_expense: item.extra_expense || 0,
     remark: item.remark || '',
     driver_advance: item.driver_advance || '',
     destination: item.destination || ''
   })
+
+  // ✅ เพิ่ม 2 บรรทัดนี้ เพื่อ "เชื่อม" ข้อมูลเดิมเข้ากับ State ที่ Dropdown ใช้
+  setCustomerName(item.customer_name || '') // เอาชื่อมาโชว์ใน Input
+  setCustomer(item.customer_id || '')       // เอา ID มาเก็บไว้ใน State กลาง
+  
   setShowEditModal(true)
 }
 
@@ -216,23 +244,65 @@ const handleExportExcel = async () => {
 }
 
 const handleUpdateDetail = async () => {
-  if (!editData) return
+  // if (!editData) return
+
+  // try {
+  //   const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/updateDetails/${editData.id}`, {
+  //     method: 'PUT',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(editData)
+  //   })
+  //   const data = await res.json()
+  //   if (!res.ok) throw new Error(data.error || 'อัปเดตไม่สำเร็จ')
+
+  //   showAlertMsg('อัปเดตรายการสำเร็จ', 'success')
+  //   setShowEditModal(false)
+  //   fetchDetails()
+  //   console.log(editData)
+  // } catch (err) {
+  //   console.error(err)
+  //   showAlertMsg(err.message || 'เกิดข้อผิดพลาด', 'error')
+  // }
+
+  if (!customerName.trim()) return showAlertMsg('กรุณากรอกชื่อลูกค้า', 'error');
 
   try {
+    let finalCustomerId = customer; // เริ่มต้นด้วย ID ที่อยู่ใน State (อาจจะเป็นของเดิม หรือที่เลือกใหม่)
+
+    // ✅ ถ้ามีการพิมพ์ชื่อใหม่ แต่ไม่ได้เลือกจาก Dropdown (ไม่มี ID)
+    if (!finalCustomerId) {
+      const resAdd = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/customer/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: customerName.trim() })
+      });
+      const newCust = await resAdd.json();
+      if (!resAdd.ok) throw new Error(newCust.error || 'เพิ่มลูกค้าไม่สำเร็จ');
+      finalCustomerId = newCust.id; // ใช้ ID ใหม่ที่เพิ่งสร้าง
+    }
+
+    // ✅ ส่ง Update โดยใช้ finalCustomerId
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/updateDetails/${editData.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editData)
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'อัปเดตไม่สำเร็จ')
+      body: JSON.stringify({
+        ...editData,
+        customer_id: finalCustomerId // ตัวนี้แหละที่จะทำให้ DB อัปเดต!
+      })
+    });
 
-    showAlertMsg('อัปเดตรายการสำเร็จ', 'success')
-    setShowEditModal(false)
-    fetchDetails()
+    if (!res.ok) throw new Error('อัปเดตไม่สำเร็จ');
+
+    showAlertMsg('แก้ไขเรียบร้อย', 'success');
+    setShowEditModal(false);
+    
+    // ล้างค่า State กลางหลังจบงาน
+    setCustomerName('');
+    setCustomer('');
+    
+    fetchDetails(); 
   } catch (err) {
-    console.error(err)
-    showAlertMsg(err.message || 'เกิดข้อผิดพลาด', 'error')
+    showAlertMsg(err.message, 'error');
   }
 }
 
@@ -452,6 +522,64 @@ const handleUpdateDetail = async () => {
                 onChange={e => setEditData({ ...editData, date: e.target.value })} 
                 className="w-full border rounded p-2 mb-2"/>
 
+                <div className="relative mb-2">
+                  <label className="block mb-2 text-sm font-semibold">
+                    ลูกค้า <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName} // ผูกกับ State กลาง
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      setCustomer(''); // ล้าง ID ทันทีที่มีการพิมพ์ใหม่ เพื่อรอเช็คว่าเป็นลูกค้าใหม่หรือไม่
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    placeholder="พิมพ์ชื่อลูกค้า..."
+                    className="w-full border border-gray-300 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+
+                  {/* Dropdown รายชื่อลูกค้า */}
+                  {showDropdown && (
+                    <ul className="absolute z-[100] w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto mt-1">
+                      {suggestions.map((item) => (
+                        <li
+                          key={item.id}
+                          onClick={() => {
+                            setCustomer(item.id);
+                            setCustomerName(item.name);
+                            setShowDropdown(false);
+                          }}
+                          className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm border-b last:border-none"
+                        >
+                          {item.name}
+                        </li>
+                      ))}
+
+                      {/* ปุ่มเพิ่มลูกค้าใหม่ (กรณีพิมพ์ชื่อที่ไม่เคยมี) */}
+                      {!suggestions.find((s) => s.name.toLowerCase() === customerName.toLowerCase()) &&
+                        customerName.trim() !== "" && (
+                          <li
+                            onClick={() => {
+                              setCustomer(""); // ยืนยันว่าไม่มี ID (เป็นลูกค้าใหม่)
+                              setShowDropdown(false);
+                            }}
+                            className="px-3 py-2 hover:bg-green-100 cursor-pointer text-green-700 text-sm font-bold bg-green-50"
+                          >
+                            ➕ เพิ่มลูกค้าใหม่: "{customerName}"
+                          </li>
+                        )}
+                    </ul>
+                  )}
+                </div>
+
+              {/* <label className="block mb-2 text-sm">ลูกค้า</label>
+              <input type="text" 
+                value={editData.customer_name} 
+                onChange={e => setEditData({ ...editData, customer_id: e.target.value })} 
+                className="w-full border rounded p-2 mb-2 "
+                /> */}
+
               <label className="block mb-2 text-sm">รับตู้</label>
               <input type="text" 
                 value={editData.loading} 
@@ -540,3 +668,4 @@ const handleUpdateDetail = async () => {
     </div>
   )
 }
+
