@@ -25,9 +25,11 @@ export const exportDetailsToExcel = async (req, res) => {
     const sqlDetails = `
       SELECT d.id,
              DATE_FORMAT(d.date, '%Y-%m-%d') AS date,
+             d.order,
              c.name AS customer_name,
              d.loading,
              d.returning,
+             d.destination,
              d.freight,
              d.toll,
              d.gas,
@@ -51,9 +53,11 @@ export const exportDetailsToExcel = async (req, res) => {
       worksheet.columns = [
         { header: 'ID', key: 'id', width: 8 },
         { header: 'วันที่', key: 'date', width: 15 },
+        { header: 'ใบงาน', key: 'order', width: 15 },
         { header: 'ลูกค้า', key: 'customer_name', width: 20 },
         { header: 'รับตู้', key: 'loading', width: 20 },
         { header: 'คืนตู้', key: 'returning', width: 20 },
+        { header: 'ส่งของ', key: 'destination', width: 20 },
         { header: 'ค่าบรรทุก', key: 'freight', width: 12 },
         { header: 'ทางด่วน', key: 'toll', width: 10 },
         { header: 'ก๊าซ/น้ำมัน', key: 'gas', width: 10 },

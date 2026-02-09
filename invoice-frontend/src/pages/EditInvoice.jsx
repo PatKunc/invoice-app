@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { HiOutlineDocumentDownload } from 'react-icons/hi'
+import { HiOutlinePlusCircle } from "react-icons/hi";
+
 
 
 export default function EditInvoice() {
@@ -11,6 +13,10 @@ export default function EditInvoice() {
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState({ show: false, id: null })
   const [showModal, setShowModal] = useState(false)
+
+  // Import งานแบบ BulkImport
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [rawData, setRawData] = useState(''); // เก็บข้อความที่ก๊อบมาจาก Excel
 
   // เพิ่มงาน
   const [date, setDate] = useState('')
@@ -51,6 +57,54 @@ export default function EditInvoice() {
     fetchDetails()
     fetchInvoiceInfo()
   }, [invoiceId])
+
+  const handleBulkImport = async () => {
+    if (!rawData.trim()) return;
+
+    const lines = rawData.trim().split('\n');
+    const rows = lines.map(line => {
+      const col = line.split('\t'); // แยกคอลัมน์ด้วย Tab จาก Excel
+      if (col.length < 9) return null; // ข้ามบรรทัดที่ข้อมูลไม่ครบ
+
+      return {
+        date: col[0].trim(),         // Start Working Date
+        order: col[2].trim(),        // Order
+        customerName: col[4].trim(), // Customer Name
+        pickup: col[5].trim(),       // Place of Pickup
+        returnLoc: col[6].trim(),    // Place of Return
+        goods: col[7].trim(),        // Place of Goods
+        freight: parseFloat(col[8].replace(/,/g, '')) || 0 // แปลงค่าขนส่ง
+      };
+    }).filter(row => row !== null);
+
+    if (rows.length === 0) {
+      alert("ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบการก๊อบปี้อีกครั้ง");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/invoiceDetails/bulkImport`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoice_id: invoiceId, // อย่าลืมใส่ invoiceId ปัจจุบันของคุณที่นี่
+          rows: rows
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert(`✅ ${result.message}`);
+        setShowImportModal(false);
+        setRawData('');
+        fetchDetails(); // ฟังก์ชันโหลดตารางใหม่ของคุณ
+      } else {
+        alert(`❌ Error: ${result.error}`);
+      }
+    } catch (err) {
+      alert("❌ ไม่สามารถเชื่อมต่อกับ Server ได้");
+    }
+  };
 
   const fetchInvoiceInfo = async () => {
     try {
@@ -321,9 +375,16 @@ const handleUpdateDetail = async () => {
         <button onClick={() => setShowModal(true)} className=" bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition duration-200 text-sm md:text-base">
           + เพิ่มงาน
         </button>
-        <button onClick={handleExportExcel} className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded transition duration-200 text-sm md:text-base">
+        <button onClick={handleExportExcel} className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded transition duration-200 text-sm md:text-base">
           <HiOutlineDocumentDownload className="w-5 h-5" />
           Download Excel
+        </button>
+        <button
+          onClick={() => setShowImportModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition duration-200"
+        >
+          <HiOutlinePlusCircle className="w-5 h-5" />
+          <span>นำเข้าจาก Excel</span>
         </button>
       </div>
 
@@ -363,7 +424,7 @@ const handleUpdateDetail = async () => {
               <th className="py-2 px-4 text-right">ค่าทางด่วน</th>
               <th className="py-2 px-4 text-right">ค่าก๊าซ</th>
               <th className="py-2 px-4 text-right">จ่ายพิเศษ</th>
-              <th className="py-2 px-4 text-right">เบิก</th>
+              <th className="py-2 px-4 text-right">จ่ายอื่นๆ</th>
               <th className="py-2 px-4 text-center">หมายเหตุ</th>
               <th className="py-2 px-4 text-center">จัดการ</th>
             </tr>
@@ -499,7 +560,7 @@ const handleUpdateDetail = async () => {
             <input type="number" value={extraExpense} onChange={e => setExtraExpense(e.target.value)} className="w-full border rounded p-2 mb-2"/>
             <label className="block mb-2 text-sm">หมายเหตุ</label>
             <input type="text" value={remark} onChange={e => setRemark(e.target.value)} className="w-full border rounded p-2 mb-4"/>
-             <label className="block mb-2 text-sm">เบิก</label>
+             <label className="block mb-2 text-sm">จ่ายอื่นๆ</label>
             <input type="text" value={driverAdvance} onChange={e => setDriverAdvance(e.target.value)} className="w-full border rounded p-2 mb-4"/>
 
             <div className="flex justify-end gap-2">
@@ -622,7 +683,7 @@ const handleUpdateDetail = async () => {
                 onChange={e => setEditData({ ...editData, extra_expense: e.target.value })} 
                 className="w-full border rounded p-2 mb-2"/>
 
-              <label className="block mb-2 text-sm">เบิก</label>
+              <label className="block mb-2 text-sm">จ่ายอื่นๆ</label>
               <input type="number" 
                 value={editData.driver_advance} 
                 onChange={e => setEditData({ ...editData, driver_advance: e.target.value })} 
@@ -665,6 +726,44 @@ const handleUpdateDetail = async () => {
           </div>
         </div>
       )}
+
+      {/* Modal นำเข้าข้อมูลจาก Excel */}
+      {showImportModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="bg-white rounded-lg p-6 w-[600px] shadow-lg animate-fadeIn">
+            <h2 className="text-xl font-bold mb-2 text-blue-600 flex items-center gap-2">
+              <span>📊</span> นำเข้าข้อมูลจาก Excel
+            </h2>
+            <p className="mb-4 text-sm text-gray-600">
+              ก๊อบปี้ข้อมูลจาก Excel (ไม่ต้องเอาหัวตาราง) แล้ววางลงในช่องด้านล่างนี้
+            </p>
+            
+            <textarea
+              value={rawData}
+              onChange={(e) => setRawData(e.target.value)}
+              className="w-full h-64 p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-xs mb-4"
+              placeholder="วางข้อมูลที่นี่ (วันที่ | Service | Order | ... | Freight)"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => { setShowImportModal(false); setRawData(''); }} 
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition duration-200"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={() => handleBulkImport()} 
+                disabled={!rawData.trim()}
+                className={`px-4 py-2 text-white rounded transition duration-200 ${!rawData.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                ยืนยันนำเข้าข้อมูล
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

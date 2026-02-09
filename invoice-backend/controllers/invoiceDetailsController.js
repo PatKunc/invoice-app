@@ -124,4 +124,77 @@ export class InvoiceDetailsController {
         })
     }
 
+    async bulkImport(req, res) {
+    const { invoice_id, rows } = req.body;
+
+    if (!invoice_id || !rows || !Array.isArray(rows)) {
+        return res.status(400).json({ error: 'invoice_id and rows array are required' });
+    }
+
+    try {
+        // ใช้ Promise.all และครอบ db.query ด้วย Promise เอง เพื่อให้รองรับ async/await
+        const query = (sql, params) => {
+            return new Promise((resolve, reject) => {
+                db.query(sql, params, (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                });
+            });
+        };
+
+        const results = [];
+
+        for (const row of rows) {
+            let customerId;
+
+            // 1. ค้นหาลูกค้า
+            const findCustSql = "SELECT id FROM customers WHERE name = ? LIMIT 1";
+            const existingCust = await query(findCustSql, [row.customerName.trim()]);
+
+            if (existingCust.length > 0) {
+                customerId = existingCust[0].id;
+            } else {
+                // 2. เพิ่มลูกค้าใหม่
+                const insertCustSql = "INSERT INTO customers (name) VALUES (?)";
+                const newCust = await query(insertCustSql, [row.customerName.trim()]);
+                customerId = newCust.insertId;
+            }
+
+            // 3. จัดการวันที่
+            const dateParts = row.date.split('/');
+            const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+
+            // 4. บันทึกข้อมูล (เช็คชื่อคอลัมน์ order_no หรือ order ให้ดีนะครับ)
+            const insertDetailSql = `
+                INSERT INTO invoices_details
+                (date, \`order\`, loading, returning, freight, toll, gas, extra_expense, remark, invoice_id, customer_id, driver_advance, destination)
+                VALUES (?, ?, ?, ?, ?, 0, 0, 0, '', ?, ?, 0, ?)
+            `;
+
+            const params = [
+                formattedDate,
+                row.order || '',
+                row.pickup || '',
+                row.returnLoc || '',
+                row.freight || 0,
+                invoice_id,
+                customerId,
+                row.goods || ''
+            ];
+
+            await query(insertDetailSql, params);
+            results.push({ date: formattedDate, order: row.order });
+        }
+
+        res.json({
+            message: `นำเข้าข้อมูลสำเร็จ ${results.length} รายการ`,
+            count: results.length
+        });
+
+    } catch (err) {
+        console.error('Bulk Import Error:', err);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาด: ' + err.message });
+    }
+}
+
 }
