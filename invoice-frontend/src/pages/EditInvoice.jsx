@@ -48,7 +48,8 @@ export default function EditInvoice() {
   const totalToll = details.reduce((sum, d) => sum + parseFloat(d.toll || 0), 0)
   const totalGas = details.reduce((sum, d) => sum + parseFloat(d.gas || 0), 0)
   const totalExtra = details.reduce((sum, d) => sum + parseFloat(d.extra_expense || 0), 0)
-  const totalExpense = totalToll + totalGas + totalExtra
+  const totalMaintenance = details.reduce((sum, d) => sum + parseFloat(d.driver_advance || 0), 0)
+  const totalExpense = totalToll + totalGas + totalExtra + totalMaintenance
   const remaining = totalFreight - totalExpense
   const driverIncome = (totalFreight - totalToll) * 0.16
 

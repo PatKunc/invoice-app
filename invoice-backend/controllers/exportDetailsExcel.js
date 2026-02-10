@@ -63,7 +63,7 @@ export class ExportExcelController{
           { header: 'ทางด่วน', key: 'toll', width: 10 },
           { header: 'ก๊าซ/น้ำมัน', key: 'gas', width: 10 },
           { header: 'จ่ายพิเศษ', key: 'extra_expense', width: 15 },
-          { header: 'เบิก', key: 'driver_advance', width: 15 },
+          { header: 'อื่นๆ', key: 'driver_advance', width: 15 },
           { header: 'หมายเหตุ', key: 'remark', width: 25 },
         ]
 
