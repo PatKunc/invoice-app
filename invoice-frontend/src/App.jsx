@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import AddInvoice from './pages/AddInvoice'
 import EditInvoice from './pages/EditInvoice'
+import Dashboard from './pages/Dashboard'
 import './App.css'
 
 function TruckSelect() {
@@ -33,6 +34,15 @@ function TruckSelect() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="flex flex-col items-center w-full max-w-[390px]">
+
+        {/* --- เพิ่มปุ่ม Dashboard ตรงนี้ --- */}
+        <button 
+          onClick={() => navigate('/Dashboard')}
+          className="w-full mb-6 py-4 bg-teal-600 text-white rounded-lg shadow-lg font-bold text-xl hover:bg-teal-700 hover:scale-105 transition duration-200 flex items-center justify-center gap-2"
+        >
+          📊 ดู Dashboard ภาพรวม
+        </button>
+
         <h1 className="text-2xl font-bold mb-6 text-center">เลือกรถ</h1>
         <div className="grid grid-cols-1 gap-4 w-full">
           {trucks.map((truck, index) => (
@@ -57,6 +67,7 @@ function App() {
       <Route path="/" element={<TruckSelect />} />
       <Route path="/AddInvoice/:truckId" element={<AddInvoice />} />
       <Route path='/EditInvoice/:invoiceId' element={<EditInvoice />}></Route>
+      <Route path='/Dashboard' element={<Dashboard />} />
     </Routes>
   )
 }

@@ -197,4 +197,23 @@ export class InvoiceDetailsController {
     }
 }
 
+getAllInvoiceDetails(req, res) {
+    const sql = `
+        SELECT 
+            d.*, 
+            t.truck_number,
+            i.truck_id
+        FROM invoices_details d
+        LEFT JOIN invoices i ON d.invoice_id = i.id
+        LEFT JOIN trucks t ON i.truck_id = t.id
+        ORDER BY d.date DESC
+    `;
+
+    db.query(sql, [], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        console.log("Raw Data Count:", result.length); // ดูใน Console ว่าเจอไหม
+        res.json(result);
+    });
+}
+
 }

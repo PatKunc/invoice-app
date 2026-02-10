@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { HiOutlineDocumentDownload } from 'react-icons/hi'
+import { HiOutlineDocumentDownload, HiPencil, HiTrash } from 'react-icons/hi'
 import { HiOutlinePlusCircle } from "react-icons/hi";
+
 
 
 
@@ -447,10 +448,10 @@ const handleUpdateDetail = async () => {
                   <button 
                     onClick={() => handleOpenEdit(d)} 
                     className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                    แก้ไข
+                    <HiPencil className='w-4 h-4'/>
                   </button>
                   <button onClick={() => setConfirmDelete({ show: true, id: d.id })} className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
-                    ลบ
+                    <HiTrash className='w-4 h-4'/>
                   </button>
                 </td>
               </tr>

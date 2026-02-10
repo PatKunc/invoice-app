@@ -1,116 +1,260 @@
 import ExcelJS from 'exceljs'
 import db from '../config/db.js'
 
-export const exportDetailsToExcel = async (req, res) => {
-  const { invoiceId } = req.params
-  if (!invoiceId) return res.status(400).json({ error: 'invoiceId is required' })
+export class ExportExcelController{
+  exportDetailsToExcel = async (req, res) => {
+    const { invoiceId } = req.params
+    if (!invoiceId) return res.status(400).json({ error: 'invoiceId is required' })
 
-  // ดึงข้อมูล invoice พร้อม truck_number แบบ string YYYY-MM
-  const sqlInvoice = `
-    SELECT t.truck_number,
-           DATE_FORMAT(i.month, '%Y-%m') AS month_str
-    FROM invoices i
-    JOIN trucks t ON i.truck_id = t.id
-    WHERE i.id = ?
-  `
-
-  db.query(sqlInvoice, [invoiceId], (err, invoiceData) => {
-    if (err) return res.status(500).json({ error: err.message })
-    if (invoiceData.length === 0) return res.status(404).json({ error: 'Invoice not found' })
-
-    const { truck_number, month_str } = invoiceData[0]
-    const filename = `${truck_number}_${month_str}.xlsx`
-
-    // ดึง invoices_details แบบ string YYYY-MM-DD
-    const sqlDetails = `
-      SELECT d.id,
-             DATE_FORMAT(d.date, '%Y-%m-%d') AS date,
-             d.order,
-             c.name AS customer_name,
-             d.loading,
-             d.returning,
-             d.destination,
-             d.freight,
-             d.toll,
-             d.gas,
-             d.extra_expense,
-             d.driver_advance,
-             d.remark
-      FROM invoices_details d
-      LEFT JOIN customers c ON d.customer_id = c.id
-      WHERE d.invoice_id = ?
-      ORDER BY d.date ASC
+    // ดึงข้อมูล invoice พร้อม truck_number แบบ string YYYY-MM
+    const sqlInvoice = `
+      SELECT t.truck_number,
+            DATE_FORMAT(i.month, '%Y-%m') AS month_str
+      FROM invoices i
+      JOIN trucks t ON i.truck_id = t.id
+      WHERE i.id = ?
     `
 
-    db.query(sqlDetails, [invoiceId], async (err, details) => {
+    db.query(sqlInvoice, [invoiceId], (err, invoiceData) => {
       if (err) return res.status(500).json({ error: err.message })
-      if (details.length === 0) return res.status(404).json({ error: 'No details found for this invoice' })
+      if (invoiceData.length === 0) return res.status(404).json({ error: 'Invoice not found' })
 
-      const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Invoice Details')
+      const { truck_number, month_str } = invoiceData[0]
+      const filename = `${truck_number}_${month_str}.xlsx`
 
-      // Header
-      worksheet.columns = [
-        { header: 'ID', key: 'id', width: 8 },
-        { header: 'วันที่', key: 'date', width: 15 },
-        { header: 'ใบงาน', key: 'order', width: 15 },
-        { header: 'ลูกค้า', key: 'customer_name', width: 20 },
-        { header: 'รับตู้', key: 'loading', width: 20 },
-        { header: 'คืนตู้', key: 'returning', width: 20 },
-        { header: 'ส่งของ', key: 'destination', width: 20 },
-        { header: 'ค่าบรรทุก', key: 'freight', width: 12 },
-        { header: 'ทางด่วน', key: 'toll', width: 10 },
-        { header: 'ก๊าซ/น้ำมัน', key: 'gas', width: 10 },
-        { header: 'จ่ายพิเศษ', key: 'extra_expense', width: 15 },
-        { header: 'เบิก', key: 'driver_advance', width: 15 },
-        { header: 'หมายเหตุ', key: 'remark', width: 25 },
-      ]
+      // ดึง invoices_details แบบ string YYYY-MM-DD
+      const sqlDetails = `
+        SELECT d.id,
+              DATE_FORMAT(d.date, '%Y-%m-%d') AS date,
+              d.order,
+              c.name AS customer_name,
+              d.loading,
+              d.returning,
+              d.destination,
+              d.freight,
+              d.toll,
+              d.gas,
+              d.extra_expense,
+              d.driver_advance,
+              d.remark
+        FROM invoices_details d
+        LEFT JOIN customers c ON d.customer_id = c.id
+        WHERE d.invoice_id = ?
+        ORDER BY d.date ASC
+      `
 
-      // Fill data
-      details.forEach(row => worksheet.addRow(row))
+      db.query(sqlDetails, [invoiceId], async (err, details) => {
+        if (err) return res.status(500).json({ error: err.message })
+        if (details.length === 0) return res.status(404).json({ error: 'No details found for this invoice' })
 
-      // สรุปค่าใช้จ่าย
-      const totalFreight = details.reduce((sum, d) => sum + parseFloat(d.freight || 0), 0)
-      const totalToll = details.reduce((sum, d) => sum + parseFloat(d.toll || 0), 0)
-      const totalGas = details.reduce((sum, d) => sum + parseFloat(d.gas || 0), 0)
-      const totalExtra = details.reduce((sum, d) => sum + parseFloat(d.extra_expense || 0), 0)
-      const totalExpense = totalToll + totalGas + totalExtra
-      const remaining = totalFreight - totalExpense
-      const driverIncome = (totalFreight - totalToll) * 0.16
-      const driverNetIncome = driverIncome + totalExtra
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Invoice Details')
+
+        // Header
+        worksheet.columns = [
+          { header: 'ID', key: 'id', width: 8 },
+          { header: 'วันที่', key: 'date', width: 15 },
+          { header: 'ใบงาน', key: 'order', width: 15 },
+          { header: 'ลูกค้า', key: 'customer_name', width: 20 },
+          { header: 'รับตู้', key: 'loading', width: 20 },
+          { header: 'คืนตู้', key: 'returning', width: 20 },
+          { header: 'ส่งของ', key: 'destination', width: 20 },
+          { header: 'ค่าบรรทุก', key: 'freight', width: 12 },
+          { header: 'ทางด่วน', key: 'toll', width: 10 },
+          { header: 'ก๊าซ/น้ำมัน', key: 'gas', width: 10 },
+          { header: 'จ่ายพิเศษ', key: 'extra_expense', width: 15 },
+          { header: 'เบิก', key: 'driver_advance', width: 15 },
+          { header: 'หมายเหตุ', key: 'remark', width: 25 },
+        ]
+
+        // Fill data
+        details.forEach(row => worksheet.addRow(row))
+
+        // สรุปค่าใช้จ่าย
+        const totalFreight = details.reduce((sum, d) => sum + parseFloat(d.freight || 0), 0)
+        const totalToll = details.reduce((sum, d) => sum + parseFloat(d.toll || 0), 0)
+        const totalGas = details.reduce((sum, d) => sum + parseFloat(d.gas || 0), 0)
+        const totalExtra = details.reduce((sum, d) => sum + parseFloat(d.extra_expense || 0), 0)
+        const totalExpense = totalToll + totalGas + totalExtra
+        const remaining = totalFreight - totalExpense
+        const driverIncome = (totalFreight - totalToll) * 0.16
+        const driverNetIncome = driverIncome + totalExtra
 
 
-      worksheet.addRow([])
-      worksheet.addRow({ loading: 'รวมค่าขนส่งทั้งหมด', freight: totalFreight })
-      worksheet.addRow({ loading: 'รวมค่าทางด่วน', freight: totalToll })
-      worksheet.addRow({ loading: 'รวมค่าน้ำมัน', freight: totalGas })
-      worksheet.addRow({ loading: 'รวมค่าใช้จ่ายอื่นๆ', freight: totalExtra })
-      worksheet.addRow({ loading: 'รวมค่าใช้จ่ายทั้งหมด', freight: totalExpense })
-      worksheet.addRow({ loading: 'คงเหลือ (รายได้สุทธิ)', freight: remaining })
-      worksheet.addRow({ loading: 'รายได้พนักงานขับ (16%)', freight: driverIncome })
-      worksheet.addRow({ loading: 'รายได้คนขับสุทธิ', freight: driverNetIncome })
+        worksheet.addRow([])
+        worksheet.addRow({ loading: 'รวมค่าขนส่งทั้งหมด', freight: totalFreight })
+        worksheet.addRow({ loading: 'รวมค่าทางด่วน', freight: totalToll })
+        worksheet.addRow({ loading: 'รวมค่าน้ำมัน', freight: totalGas })
+        worksheet.addRow({ loading: 'รวมค่าใช้จ่ายอื่นๆ', freight: totalExtra })
+        worksheet.addRow({ loading: 'รวมค่าใช้จ่ายทั้งหมด', freight: totalExpense })
+        worksheet.addRow({ loading: 'คงเหลือ (รายได้สุทธิ)', freight: remaining })
+        worksheet.addRow({ loading: 'รายได้พนักงานขับ (16%)', freight: driverIncome })
+        worksheet.addRow({ loading: 'รายได้คนขับสุทธิ', freight: driverNetIncome })
 
-      // จัดฟอร์แมตส่วนสรุป
-      const summaryStartRow = details.length + 3
-      for (let i = summaryStartRow; i <= worksheet.rowCount; i++) {
-        const row = worksheet.getRow(i)
-        row.getCell('loading').font = { bold: true }
-        row.getCell('freight').numFmt = '#,##0.00'
-      }
+        // จัดฟอร์แมตส่วนสรุป
+        const summaryStartRow = details.length + 3
+        for (let i = summaryStartRow; i <= worksheet.rowCount; i++) {
+          const row = worksheet.getRow(i)
+          row.getCell('loading').font = { bold: true }
+          row.getCell('freight').numFmt = '#,##0.00'
+        }
 
-      // Styling header
-      worksheet.getRow(1).eachCell(cell => {
-        cell.font = { bold: true }
-        cell.alignment = { vertical: 'middle', horizontal: 'center' }
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }
+        // Styling header
+        worksheet.getRow(1).eachCell(cell => {
+          cell.font = { bold: true }
+          cell.alignment = { vertical: 'middle', horizontal: 'center' }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } }
+        })
+
+        // Set filename
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+
+        await workbook.xlsx.write(res)
+        res.end()
       })
-
-      // Set filename
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-
-      await workbook.xlsx.write(res)
-      res.end()
     })
-  })
+  }
+
+  exportYearlySummary = async (req, res) => {
+    // 1. รับค่าจาก Query Params
+    const { year, month, truckId } = req.query;
+    
+    if (!year) return res.status(400).json({ error: 'Year is required' });
+
+    // 2. SQL Query ดึงข้อมูลสรุปตามเงื่อนไข
+    let sql = `
+        SELECT 
+            t.truck_number,
+            DATE_FORMAT(i.month, '%Y-%m') AS month_str,
+            SUM(d.freight) AS total_freight,
+            SUM(d.toll) AS total_toll,
+            SUM(d.gas) AS total_gas,
+            SUM(d.extra_expense) AS total_extra,
+            SUM(d.driver_advance) AS total_advance,
+            COUNT(d.id) AS job_count
+        FROM invoices i
+        JOIN trucks t ON i.truck_id = t.id
+        LEFT JOIN invoices_details d ON i.id = d.invoice_id
+        WHERE YEAR(i.month) = ?
+    `;
+
+    const params = [year];
+
+    if (month && month !== 'all') {
+        sql += ` AND MONTH(i.month) = ? `;
+        params.push(month);
+    }
+
+    if (truckId && truckId !== 'all') {
+        sql += ` AND i.truck_id = ? `;
+        params.push(truckId);
+    }
+
+    sql += ` GROUP BY t.truck_number, i.month ORDER BY i.month ASC, t.truck_number ASC`;
+
+    db.query(sql, params, async (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Yearly Summary');
+
+        // 3. กำหนด Header (เพิ่มคอลัมน์ เบิกเงิน)
+        worksheet.columns = [
+            { header: 'ทะเบียนรถ', key: 'truck_number', width: 15 },
+            { header: 'รอบเดือน', key: 'month_str', width: 12 },
+            { header: 'จำนวนงาน', key: 'job_count', width: 12 },
+            { header: 'รายได้ (Freight)', key: 'total_freight', width: 15 },
+            { header: 'ทางด่วน', key: 'total_toll', width: 12 },
+            { header: 'น้ำมัน/แก๊ส', key: 'total_gas', width: 12 },
+            { header: 'จ่ายพิเศษ', key: 'total_extra', width: 12 },
+            { header: 'จ่ายอื่นๆ (Advance)', key: 'total_advance', width: 15 },
+            { header: 'กำไรสุทธิเบื้องต้น', key: 'profit', width: 18 },
+        ];
+
+        // 4. เตรียมตัวแปรสำหรับยอดรวมทั้งหมด (Grand Totals)
+        let grandTotalJobs = 0;
+        let grandTotalFreight = 0;
+        let grandTotalToll = 0;
+        let grandTotalGas = 0;
+        let grandTotalExtra = 0;
+        let grandTotalAdvance = 0;
+        let grandTotalProfit = 0;
+
+        // 5. ใส่ข้อมูลและคำนวณกำไรรายแถว พร้อมสะสมยอดรวม
+        results.forEach(row => {
+            const freight = parseFloat(row.total_freight || 0);
+            const toll = parseFloat(row.total_toll || 0);
+            const gas = parseFloat(row.total_gas || 0);
+            const extra = parseFloat(row.total_extra || 0);
+            const advance = parseFloat(row.total_advance || 0);
+            const jobCount = parseInt(row.job_count || 0);
+            const profit = freight - (toll + gas + extra);
+
+            grandTotalJobs += jobCount;
+            grandTotalFreight += freight;
+            grandTotalToll += toll;
+            grandTotalGas += gas;
+            grandTotalExtra += extra;
+            grandTotalAdvance += advance;
+            grandTotalProfit += profit;
+
+            worksheet.addRow({
+                ...row,
+                total_advance: advance,
+                profit: profit
+            });
+        });
+
+        // 6. เพิ่มแถวสรุปยอดรวม (Grand Total) ท้ายตาราง
+        worksheet.addRow([]); // บรรทัดว่าง
+        const summaryRow = worksheet.addRow({
+            truck_number: 'รวมทั้งหมด',
+            month_str: '',
+            job_count: grandTotalJobs,
+            total_freight: grandTotalFreight,
+            total_toll: grandTotalToll,
+            total_gas: grandTotalGas,
+            total_extra: grandTotalExtra,
+            total_advance: grandTotalAdvance,
+            profit: grandTotalProfit
+        });
+
+        // จัดฟอร์แมตแถวสรุป (ตัวหนา + พื้นหลังสีเหลือง)
+        summaryRow.eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFFF00' }
+            };
+            cell.border = {
+                top: { style: 'thin' },
+                bottom: { style: 'double' }
+            };
+        });
+
+        // 7. Styling & Formatting
+        // ตั้งค่าตัวเลขให้มีคอมม่า
+        ['total_freight', 'total_toll', 'total_gas', 'total_extra', 'total_advance', 'profit'].forEach(key => {
+            worksheet.getColumn(key).numFmt = '#,##0.00';
+        });
+
+        // หัวตารางสีฟ้า
+        worksheet.getRow(1).eachCell(cell => {
+            cell.font = { bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } };
+            cell.alignment = { horizontal: 'center' };
+        });
+
+        // 8. ส่งไฟล์ออกไป
+        const filename = `Summary_${year}${month ? '_' + month : ''}.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    });
+  }
+
 }

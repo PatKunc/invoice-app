@@ -4,6 +4,8 @@ import { InvoiceDetailsController } from '../controllers/invoiceDetailsControlle
 const router = express.Router()
 const invoiceDetailsController = new InvoiceDetailsController()
 
+router.get('/all', invoiceDetailsController.getAllInvoiceDetails)
+
 router.get('/:invoiceId', invoiceDetailsController.getDetails)
 
 router.post('/add', invoiceDetailsController.addDetails)
