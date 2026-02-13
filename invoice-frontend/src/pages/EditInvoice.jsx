@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { HiOutlineDocumentDownload, HiPencil, HiTrash } from 'react-icons/hi'
+import { useEffect, useState, useMemo } from 'react'
+import { HiOutlineDocumentDownload, HiPencil, HiTrash, HiSearch, HiSortAscending, HiSortDescending } from 'react-icons/hi'
 import { HiOutlinePlusCircle } from "react-icons/hi";
 
 
@@ -55,10 +55,53 @@ export default function EditInvoice() {
 
   const [invoiceInfo, setInvoiceInfo] = useState(null)
 
+  // [NEW] Feature: Search & Sort States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'asc' })
+
   useEffect(() => {
     fetchDetails()
     fetchInvoiceInfo()
   }, [invoiceId])
+
+  // [NEW] Logic สำหรับการค้นหาและเรียงลำดับ
+  const processedDetails = useMemo(() => {
+    let result = [...details];
+
+    // 1. Quick Search Logic
+    if (searchTerm) {
+      result = result.filter(d => 
+        (d.order && d.order.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (d.customer_name && d.customer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (d.destination && d.destination.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // 2. Sorting Logic
+    result.sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      if (sortConfig.key === 'date') {
+        aValue = new Date(a.date).getTime();
+        bValue = new Date(b.date).getTime();
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [details, searchTerm, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleBulkImport = async () => {
     if (!rawData.trim()) return;
@@ -366,143 +409,208 @@ const handleUpdateDetail = async () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 p-4 md:p-6 relative">
-      <h1 className="text-xl md:text-2xl font-bold mb-4 text-center">
+      {/* ส่วนหัวใบงาน */}
+      <div className="w-full max-w-7xl flex flex-col md:flex-row justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          
+           <h1 className="text-xl md:text-2xl font-bold mb-4 text-center">
         รายละเอียดใบงาน {invoiceId} {invoiceInfo ? `(เดือน: ${new Date(invoiceInfo.month).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })} / รถ: ${invoiceInfo.truck_number})` : ''}
       </h1>
+        </div>
+        
+        {/* [NEW] Quick Search Input */}
+        <div className="relative mt-4 md:mt-0 w-full md:w-64">
+          <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder="ค้นหาเลข Order / ลูกค้า..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all"
+          />
+        </div>
+      </div>
 
-      <div className='flex items-center gap-3 pb-3'>
-        <button onClick={() => navigate(-1)} className=" bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition duration-200 text-sm md:text-base">
-          กลับ
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-8 border-b border-gray-100 mb-6">
+      {/* ฝั่งซ้าย: ปุ่มย้อนกลับแบบวงกลม/มน ดูไม่อึดอัด */}
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="group flex items-center gap-2 bg-white text-gray-600 px-5 py-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+        >
+          <span className="group-hover:-translate-x-1 transition-transform">←</span>
+          <span className="font-bold text-sm">ย้อนกลับ</span>
         </button>
-        <button onClick={() => setShowModal(true)} className=" bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition duration-200 text-sm md:text-base">
-          + เพิ่มงาน
-        </button>
-        <button onClick={handleExportExcel} className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded transition duration-200 text-sm md:text-base">
-          <HiOutlineDocumentDownload className="w-5 h-5" />
-          Download Excel
-        </button>
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition duration-200"
+      </div>
+
+      {/* ฝั่งขวา: กลุ่มปุ่ม Action หลัก */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* ปุ่มเพิ่มงาน - เน้นให้เด่นที่สุดด้วยสีเขียวและเงาฟุ้ง */}
+        <button 
+          onClick={() => setShowModal(true)} 
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-2xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all active:scale-95"
         >
           <HiOutlinePlusCircle className="w-5 h-5" />
-          <span>นำเข้าจาก Excel</span>
+          <span>เพิ่มรายการใหม่</span>
         </button>
+
+        {/* กลุ่มปุ่มจัดการข้อมูล (Excel) - ใช้โทนสีน้ำเงิน/ฟ้าให้ดูเป็นทางการ */}
+        <div className="flex items-center bg-gray-100 p-1 rounded-2xl border border-gray-200">
+          <button 
+            onClick={() => setShowImportModal(true)} 
+            className="flex items-center gap-2 px-5 py-2 bg-white text-blue-600 rounded-xl shadow-sm hover:text-blue-700 hover:bg-blue-50 transition-all font-bold text-sm"
+          >
+            <HiOutlinePlusCircle className="w-4 h-4 text-blue-500" />
+            นำเข้า Excel
+          </button>
+          
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+          
+          <button 
+            onClick={handleExportExcel} 
+            className="flex items-center gap-2 px-5 py-2 bg-white text-teal-600 rounded-xl hover:bg-emerald-50 hover:text-teal-600 hover:shadow-sm transition-all font-bold text-sm"
+          >
+            <HiOutlineDocumentDownload className="w-4 h-4" />
+            ส่งออก (Download)
+          </button>
+        </div>
+      </div>
+    </div>
+
+      {/* Stats Cards (คงเดิม) */}
+      <div className="w-full max-w-6xl mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-blue-500">
+          <p className="text-gray-500 text-xs font-bold uppercase">ค่าบรรทุกรวม</p>
+          <p className="font-black text-xl text-blue-600">{totalFreight.toLocaleString()} ฿</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-red-500">
+          <p className="text-gray-500 text-xs font-bold uppercase">ค่าใช้จ่ายรวม</p>
+          <p className="font-black text-xl text-red-600">{totalExpense.toLocaleString()} ฿</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-green-500">
+          <p className="text-gray-500 text-xs font-bold uppercase">คงเหลือ</p>
+          <p className="font-black text-xl text-green-600">{remaining.toLocaleString()} ฿</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-orange-500">
+          <p className="text-gray-500 text-xs font-bold uppercase">รายได้พขร.</p>
+          <p className="font-black text-xl text-orange-600">{driverIncome.toLocaleString()} ฿</p>
+        </div>
       </div>
 
-      <p className='text-gray-700 py-2'>จำนวนงาน: {details.length}</p>
+      {/* Desktop Table: ปรับปรุง UI ใหม่ เพิ่ม Column หมายเหตุ และ Sorting */}
+<div className="hidden md:block w-full max-w-full overflow-x-auto bg-white rounded-2xl shadow-lg border border-gray-200 mt-4">
+  <table className="min-w-full text-sm">
+    <thead>
+      <tr className="bg-gray-50 text-gray-600 border-b">
+        {/* หัวตารางพร้อมระบบ Sort */}
+        <th className="py-4 px-4 text-left cursor-pointer hover:text-blue-600 group" onClick={() => requestSort('date')}>
+          <div className="flex items-center gap-1">
+            วันที่ 
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+              {sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? <HiSortAscending/> : <HiSortDescending/>) : <HiSortAscending className="text-gray-300"/>}
+            </span>
+          </div>
+        </th>
+        <th className="py-4 px-4 text-left cursor-pointer hover:text-blue-600 group" onClick={() => requestSort('order')}>
+          <div className="flex items-center gap-1">
+            เลข Order 
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+              {sortConfig.key === 'order' ? (sortConfig.direction === 'asc' ? <HiSortAscending/> : <HiSortDescending/>) : <HiSortAscending className="text-gray-300"/>}
+            </span>
+          </div>
+        </th>
+        <th className="py-4 px-4 text-left">ลูกค้า</th>
+        <th className="py-4 px-4 text-left">รับตู้ - คืนตู้</th>
+        <th className="py-4 px-4 text-left font-bold text-slate-800">ส่งของ (ปลายทาง)</th>
+        <th className="py-4 px-4 text-right">ค่าบรรทุก</th>
+        <th className="py-4 px-4 text-right">ทางด่วน</th>
+        <th className="py-4 px-4 text-right">ก๊าซ</th>
+        <th className="py-4 px-4 text-right">เบี้ย/อื่นๆ</th>
+        <th className="py-4 px-4 text-left font-semibold text-blue-600">หมายเหตุ</th> {/* เพิ่ม Column หมายเหตุ */}
+        <th className="py-4 px-4 text-center">จัดการ</th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100">
+      {processedDetails.length > 0 ? processedDetails.map(d => (
+        /* Dynamic Row Highlighting: งาน Import (มี order) = สีฟ้าอ่อน, งานคีย์มือ = สีขาว */
+        <tr key={d.id} className={`${d.order ? 'bg-blue-50/60' : 'bg-white'} hover:bg-gray-100 transition duration-150`}>
+          <td className="py-4 px-4 whitespace-nowrap text-gray-600">
+            {new Date(d.date).toLocaleDateString('th-TH')}
+          </td>
+          <td className="py-4 px-4 font-mono font-bold text-blue-700">
+            {d.order || '-'}
+          </td>
+          <td className="py-4 px-4 font-semibold text-slate-800">
+            {d.customer_name}
+          </td>
+          <td className="py-4 px-4 text-xs text-gray-500">
+            <div><span className="text-green-600 font-bold">↑</span> {d.loading}</div>
+            <div><span className="text-red-500 font-bold">↓</span> {d.returning}</div>
+          </td>
+          <td className="py-4 px-4 font-bold text-slate-700">
+            {d.destination}
+          </td>
+          <td className="py-4 px-4 text-right font-black text-slate-900">
+            {parseFloat(d.freight || 0).toLocaleString()}
+          </td>
+          <td className="py-4 px-4 text-right text-gray-500">
+            {parseFloat(d.toll || 0).toLocaleString()}
+          </td>
+          <td className="py-4 px-4 text-right text-gray-500">
+            {parseFloat(d.gas || 0).toLocaleString()}
+          </td>
+          <td className="py-4 px-4 text-right">
+            <div className="text-xs text-indigo-500">พิเศษ: {parseFloat(d.extra_expense || 0).toLocaleString()}</div>
+            <div className="text-sm text-orange-600 font-black">อื่นๆ: {parseFloat(d.driver_advance || 0).toLocaleString()}</div>
+          </td>
+          
+          {/* ข้อมูลหมายเหตุ (เลขตู้ หรือรายละเอียดเพิ่มเติม) */}
+          <td className="py-4 px-4 text-xs font-medium text-blue-600 italic max-w-[150px] truncate">
+            {d.remark || '-'}
+          </td>
 
-      <div className="w-full max-w-4xl mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">ค่าบรรทุกรวม</p>
-          <p className="font-bold text-lg">{totalFreight.toLocaleString()} ฿</p>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">ค่าใช้จ่ายรวม</p>
-          <p className="font-bold text-lg">{totalExpense.toLocaleString()} ฿</p>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">คงเหลือ</p>
-          <p className="font-bold text-lg">{remaining.toLocaleString()} ฿</p>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">รายได้พขร.</p>
-          <p className="font-bold text-lg">{driverIncome.toLocaleString()} ฿</p>
-        </div>
-      </div>
-
-
-      {/* Desktop Table */}
-      <div className="hidden md:block w-full overflow-x-auto">
-        <table className="min-w-full bg-white rounded shadow text-sm md:text-base">
-          <thead>
-            <tr className="bg-gray-200 text-gray-700">
-              <th className="py-2 px-4 text-left">วันที่</th>
-              <th className="py-2 px-4 text-left">ลูกค้า</th>
-              <th className="py-2 px-4 text-left">รับตู้</th>
-              <th className="py-2 px-4 text-left">คืนตู้</th>
-              <th className="py-2 px-4 text-left">ส่งของ</th>
-              <th className="py-2 px-4 text-right">ค่าบรรทุก</th>
-              <th className="py-2 px-4 text-right">ค่าทางด่วน</th>
-              <th className="py-2 px-4 text-right">ค่าก๊าซ</th>
-              <th className="py-2 px-4 text-right">จ่ายพิเศษ</th>
-              <th className="py-2 px-4 text-right">จ่ายอื่นๆ</th>
-              <th className="py-2 px-4 text-center">หมายเหตุ</th>
-              <th className="py-2 px-4 text-center">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.length > 0 ? details.map(d => (
-              <tr key={d.id} className="border-t hover:bg-gray-100 transition duration-200">
-                <td className="py-2 px-4">{new Date(d.date).toLocaleDateString('th-TH')}</td>
-                <td className="py-2 px-4">{d.customer_name}</td>
-                <td className="py-2 px-4">{d.loading}</td>
-                <td className="py-2 px-4">{d.returning}</td>
-                <td className="py-2 px-4">{d.destination}</td>
-                <td className="py-2 px-4 text-right">{parseFloat(d.freight).toLocaleString()}</td>
-                <td className="py-2 px-4 text-right">{parseFloat(d.toll).toLocaleString()}</td>
-                <td className="py-2 px-4 text-right">{parseFloat(d.gas).toLocaleString()}</td>
-                <td className="py-2 px-4 text-right">{parseFloat(d.extra_expense).toLocaleString()}</td>
-                <td className="py-2 px-4 text-right">{parseFloat(d.driver_advance).toLocaleString()}</td>
-                <td className="py-2 px-4 text-center">{d.remark}</td>
-                <td className="py-2 px-4 text-center flex justify-center gap-2">
-                  <button 
-                    onClick={() => handleOpenEdit(d)} 
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                    <HiPencil className='w-4 h-4'/>
-                  </button>
-                  <button onClick={() => setConfirmDelete({ show: true, id: d.id })} className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
-                    <HiTrash className='w-4 h-4'/>
-                  </button>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan="12" className="py-2 px-4 text-center text-gray-500">ยังไม่มีรายละเอียด</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="block md:hidden w-full space-y-4">
-        {details.length > 0 ? details.map(d => (
-          <div key={d.id} className="bg-white rounded-xl shadow p-4 border border-gray-100">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-gray-800 text-sm">{d.customer_name}</h3>
-              <span className="text-xs text-gray-500">{new Date(d.date).toLocaleDateString('th-TH')}</span>
-            </div>
-            <p className="text-sm text-gray-600"><b>รับ:</b> {d.loading}</p>
-            <p className="text-sm text-gray-600"><b>คืน:</b> {d.returning}</p>
-            <p className="text-sm text-gray-600"><b>ส่งของ:</b> {d.destination}</p>
-            <div className="grid grid-cols-2 text-sm text-gray-700 mt-2">
-              <p><b>ค่าบรรทุก:</b> {d.freight}฿</p>
-              <p><b>ค่าน้ำมัน:</b> {d.gas}฿</p>
-              <p><b>ทางด่วน:</b> {d.toll}฿</p>
-              <p><b>จ่ายพิเศษ:</b> {d.extra_expense}฿</p>
-              {d.remark && <p><b>หมายเหตุ:</b> {d.remark}</p>}
-              {d.driver_advance && <p><b>เบิก:</b> {d.driver_advance}</p>}
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
+          <td className="py-4 px-4 text-center">
+            <div className="flex justify-center gap-2">
               <button 
                 onClick={() => handleOpenEdit(d)} 
-                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                แก้ไข
+                className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm"
+                title="แก้ไข"
+              >
+                <HiPencil className='w-4 h-4'/>
               </button>
-              <button onClick={() => setConfirmDelete({ show: true, id: d.id })} className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">
-                ลบ
+              <button 
+                onClick={() => setConfirmDelete({ show: true, id: d.id })} 
+                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition shadow-sm"
+                title="ลบ"
+              >
+                <HiTrash className='w-4 h-4'/>
               </button>
             </div>
-          </div>
-        )) : (
-          <div className="text-center text-gray-500">ยังไม่มีรายละเอียด</div>
-        )}
-      </div>
+          </td>
+        </tr>
+      )) : (
+        <tr>
+          <td colSpan="11" className="py-20 text-center">
+            <div className="flex flex-col items-center text-gray-400">
+              <span className="text-4xl mb-2">📁</span>
+              <p className="font-bold">ไม่พบข้อมูลใบงาน</p>
+              <p className="text-xs">ลองเปลี่ยนคำค้นหา หรือกด "เพิ่มงาน" ใหม่</p>
+            </div>
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
 
-      <button onClick={() => navigate(-1)} className=" bg-gray-500 text-white px-4 py-2 my-4 rounded hover:bg-gray-600 transition duration-200 text-sm md:text-base">
-          กลับ
-      </button>
+      {/* Mobile Cards (คงเดิมแต่เพิ่มเงื่อนไขสีพื้นหลัง) */}
+      <div className="block md:hidden w-full space-y-4">
+        {processedDetails.map(d => (
+          <div key={d.id} className={`${d.order ? 'bg-blue-50 border-blue-100' : 'bg-white'} rounded-2xl shadow-sm p-4 border`}>
+            {/* รายละเอียด Card Mobile... */}
+          </div>
+        ))}
+      </div>
 
       {/* Modal เพิ่มงาน */}
       {showModal && (

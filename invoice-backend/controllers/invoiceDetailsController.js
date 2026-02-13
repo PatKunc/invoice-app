@@ -211,7 +211,7 @@ getAllInvoiceDetails(req, res) {
 
     db.query(sql, [], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        console.log("Raw Data Count:", result.length); // ดูใน Console ว่าเจอไหม
+        // console.log("Raw Data Count:", result.length); // ดูใน Console ว่าเจอไหม
         res.json(result);
     });
 }
