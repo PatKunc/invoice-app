@@ -60,11 +60,12 @@ export default function Dashboard() {
       expense: 0, 
       gas: 0, 
       toll: 0, 
-      maintenanceOnly: 0, // ค่าอื่นๆ ทั่วไป
-      repair: 0,          // สแกนเจอคำว่าซ่อม
-      parking: 0,         // สแกนเจอค่าจอด
+      maintenanceOnly: 0, 
+      repair: 0,          
+      parking: 0,         
       extra: 0, 
-      driverWage: 0, 
+      driverWage: 0,        
+      driverWage10Wheel: 0  
     };
     const trucksComparison = {}; 
     let labels = [];
@@ -101,23 +102,34 @@ export default function Dashboard() {
         const maintTotal = Number(item.driver_advance || 0); 
         const extra = Number(item.extra_expense || 0);
         const remark = (item.remark || '').toLowerCase();
+        const isTenWheeler = Number(item.truck_id) === 4;
 
-        // Keyword Scanner
+        let currentWage16 = 0;
+        let currentWage10 = 0;
         let itemRepair = 0;
         let itemParking = 0;
         let itemMaintOnly = 0;
-        if (maintTotal > 0) {
-          if (remark.includes('ซ่อม') || remark.includes('ยาง') || remark.includes('น้ำมันเครื่อง') || remark.includes('อะไหล่')) {
-            itemRepair = maintTotal;
-          } else if (remark.includes('จอด') || remark.includes('พัก') || remark.includes('ค้างคืน') || remark.includes('ด่าน')) {
-            itemParking = maintTotal;
+
+        if (isTenWheeler) {
+          currentWage16 = 0; 
+          if (remark.includes('สิบล้อ')) {
+            currentWage10 = maintTotal;
           } else {
-            itemMaintOnly = maintTotal;
+            if (remark.includes('ซ่อม') || remark.includes('ยาง')) itemRepair = maintTotal;
+            else if (remark.includes('จอด') || remark.includes('พัก')) itemParking = maintTotal;
+            else itemMaintOnly = maintTotal;
+          }
+        } else {
+          currentWage16 = (freight - toll) * 0.16;
+          currentWage10 = 0;
+          if (maintTotal > 0) {
+            if (remark.includes('ซ่อม') || remark.includes('ยาง')) itemRepair = maintTotal;
+            else if (remark.includes('จอด') || remark.includes('พัก')) itemParking = maintTotal;
+            else itemMaintOnly = maintTotal;
           }
         }
 
-        const wage16 = (freight - toll) * 0.16;
-        const totalExp = gas + toll + maintTotal + extra + wage16;
+        const totalExp = gas + toll + maintTotal + extra + currentWage16;
 
         stats.revenue += freight;
         stats.expense += totalExp;
@@ -127,7 +139,8 @@ export default function Dashboard() {
         stats.parking += itemParking;
         stats.maintenanceOnly += itemMaintOnly;
         stats.extra += extra;
-        stats.driverWage += wage16;
+        stats.driverWage += currentWage16;
+        stats.driverWage10Wheel += currentWage10;
 
         if (selectedYear === 'all' || selectedMonth === 'all') {
           dataRev[itemMonthIdx] += freight;
@@ -145,19 +158,24 @@ export default function Dashboard() {
       }
     });
 
-    return { filteredStats: stats, chartData: { dataRev, dataExp }, chartLabels: labels, comparisonData: trucksComparison };
+    return { 
+      filteredStats: stats, 
+      chartData: { dataRev, dataExp }, 
+      chartLabels: labels, 
+      comparisonData: trucksComparison 
+    };
   }, [rawData, selectedTruck, selectedYear, selectedMonth]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500 font-bold">กำลังโหลดข้อมูล...</div>;
 
-  const netProfit = filteredStats.revenue - filteredStats.expense;
+  const netProfit = (filteredStats?.revenue || 0) - (filteredStats?.expense || 0);
   const isLoss = netProfit < 0;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header Section (ของเก่า: คัดกรอง + Export) */}
+        {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Dashboard 🚛</h1>
@@ -169,15 +187,15 @@ export default function Dashboard() {
               <FileSpreadsheet size={18} /> ส่งออก Excel
             </button>
             <div className="h-8 w-[1px] bg-gray-200 mx-1 hidden md:block"></div>
-            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold" value={selectedTruck} onChange={(e) => setSelectedTruck(e.target.value)}>
+            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold cursor-pointer" value={selectedTruck} onChange={(e) => setSelectedTruck(e.target.value)}>
               <option value="all">รถทุกคัน</option>
               {truckOptions.filter(o => o !== 'all').map(opt => <option key={opt} value={opt}>ทะเบียน {opt}</option>)}
             </select>
-            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold cursor-pointer" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               <option value="all">ทุกปี</option>
               {yearOptions.filter(o => o !== 'all').map(y => <option key={y} value={y}>ปี {y}</option>)}
             </select>
-            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} disabled={selectedYear === 'all'}>
+            <select className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold cursor-pointer" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} disabled={selectedYear === 'all'}>
               <option value="all">ทุกเดือน</option>
               {monthNames.map((name, index) => (<option key={index} value={(index + 1).toString()}>{name}</option>))}
             </select>
@@ -185,66 +203,66 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- KPI Section (ของใหม่: เน้นกำไรสุทธิบริษัท) --- */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border-b-8 border-blue-500">
-            <p className="text-gray-400 text-xs font-bold mb-1 uppercase tracking-widest">รายรับทั้งหมด</p>
-            <p className="text-3xl font-black text-blue-600">฿{filteredStats.revenue.toLocaleString()}</p>
+          <div className="bg-blue-50 p-6 rounded-3xl shadow-xl border-b-8 border-blue-500">
+            <p className="text-gray-500 text-xs font-bold mb-1 uppercase tracking-widest">รายรับทั้งหมด</p>
+            <p className="text-3xl font-black text-blue-600">฿{(filteredStats?.revenue || 0).toLocaleString()}</p>
           </div>
-          <div className="bg-white p-6 rounded-3xl shadow-sm border-b-8 border-red-500">
-            <p className="text-gray-400 text-xs font-bold mb-1 uppercase tracking-widest">รายจ่ายรวม (หักค่าแรงแล้ว)</p>
-            <p className="text-3xl font-black text-red-500">฿{filteredStats.expense.toLocaleString()}</p>
+          <div className="bg-red-50 p-6 rounded-3xl shadow-xl border-b-8 border-red-500">
+            <p className="text-gray-500 text-xs font-bold mb-1 uppercase tracking-widest">รายจ่ายรวมบริษัท</p>
+            <p className="text-3xl font-black text-red-500">฿{(filteredStats?.expense || 0).toLocaleString()}</p>
           </div>
           <div className={`p-6 rounded-3xl shadow-xl text-white ${isLoss ? 'bg-red-600' : 'bg-emerald-600'}`}>
-            <p className="text-xs font-bold mb-1 uppercase opacity-80 tracking-widest">กำไรสุทธิ (บริษัทได้รับจริง)</p>
+            <p className="text-xs font-bold mb-1 uppercase opacity-80 tracking-widest">กำไรสุทธิ</p>
             <p className="text-3xl font-black">฿{Math.abs(netProfit).toLocaleString()}</p>
-            <p className="text-[10px] mt-1 italic">*หักแก๊ส/ด่วน/ซ่อม/จอด/เบี้ยเลี้ยง/ค่าแรง 16%</p>
+            <p className="text-[10px] mt-1 italic">*แยกคิด 16% (6ล้อ) และ เหมาจ่าย (10ล้อ)</p>
           </div>
         </div>
 
-        {/* --- Expense Detail Cards (ของใหม่: แยกค่าซ่อม/ค่าจอด) --- */}
+        {/* Detail Expense Cards */}
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-700">
           <span className="w-2 h-6 bg-orange-500 rounded-full"></span>
-          รายละเอียดค่าใช้จ่ายแยกประเภท
+          รายละเอียดรายจ่ายและค่าแรงคนขับ
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
-
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-10">
           <div className="bg-amber-50 p-4 rounded-2xl shadow-sm border-t-4 border-amber-500">
-            <p className="text-amber-600 text-[12px] font-black uppercase">แก๊ส/น้ำมัน</p>
-            <p className="text-lg font-bold text-amber-700">฿{filteredStats.gas.toLocaleString()}</p>
+            <p className="text-amber-600 text-[10px] font-black uppercase">แก๊ส/น้ำมัน</p>
+            <p className="text-lg font-bold text-amber-700">฿{(filteredStats?.gas || 0).toLocaleString()}</p>
           </div>
-
           <div className="bg-sky-50 p-4 rounded-2xl shadow-sm border-t-4 border-sky-500">
-            <p className="text-sky-600 text-[12px] font-black uppercase">ทางด่วน</p>
-            <p className="text-lg font-bold text-sky-700">฿{filteredStats.toll.toLocaleString()}</p>
+            <p className="text-sky-600 text-[10px] font-black uppercase">ทางด่วน</p>
+            <p className="text-lg font-bold text-sky-700">฿{(filteredStats?.toll || 0).toLocaleString()}</p>
           </div>
-
           <div className="bg-fuchsia-50 p-4 rounded-2xl shadow-sm border-t-4 border-fuchsia-500">
-            <p className="text-fuchsia-600 text-[12px] font-black uppercase">ค่าซ่อม/อะไหล่</p>
-            <p className="text-lg font-bold text-fuchsia-700">฿{filteredStats.repair.toLocaleString()}</p>
+            <p className="text-fuchsia-600 text-[10px] font-black uppercase">ค่าซ่อม/อะไหล่</p>
+            <p className="text-lg font-bold text-fuchsia-700">฿{(filteredStats?.repair || 0).toLocaleString()}</p>
           </div>
-
           <div className="bg-rose-50 p-4 rounded-2xl shadow-sm border-t-4 border-rose-500">
-            <p className="text-rose-600 text-[12px] font-black uppercase">ค่าจอด/ด่าน</p>
-            <p className="text-lg font-bold text-rose-700">฿{filteredStats.parking.toLocaleString()}</p>
+            <p className="text-rose-600 text-[10px] font-black uppercase">ค่าจอด/ด่าน</p>
+            <p className="text-lg font-bold text-rose-700">฿{(filteredStats?.parking || 0).toLocaleString()}</p>
           </div>
-
-          <div className="bg-indigo-50 p-4 rounded-2xl shadow-sm border-t-4 border-indigo-500">
-            <p className="text-indigo-600 text-[12px] font-black uppercase">เบี้ยเลี้ยง</p>
-            <p className="text-lg font-bold text-indigo-700">฿{filteredStats.extra.toLocaleString()}</p>
+          <div className="bg-gray-100 p-4 rounded-2xl shadow-sm border-t-4 border-gray-400">
+            <p className="text-gray-500 text-[10px] font-black uppercase">อื่นๆ</p>
+            <p className="text-lg font-bold text-gray-700">฿{(filteredStats?.maintenanceOnly || 0).toLocaleString()}</p>
           </div>
-
+          <div className="bg-orange-50 p-4 rounded-2xl shadow-sm border-t-4 border-orange-500">
+            <p className="text-orange-600 text-[10px] font-black uppercase">เบี้ยเลี้ยง</p>
+            <p className="text-lg font-bold text-orange-700">฿{(filteredStats?.extra || 0).toLocaleString()}</p>
+          </div>
           <div className="bg-emerald-50 p-4 rounded-2xl shadow-sm border-t-4 border-emerald-500">
-            <p className="text-emerald-600 text-[12px] font-black uppercase">ค่าแรง 16%</p>
-            <p className="text-lg font-bold text-emerald-700">฿{filteredStats.driverWage.toLocaleString()}</p>
+            <p className="text-emerald-600 text-[10px] font-black uppercase">ค่าแรง 16%</p>
+            <p className="text-lg font-bold text-emerald-700">฿{(filteredStats?.driverWage || 0).toLocaleString()}</p>
           </div>
-
+          <div className="bg-indigo-50 p-4 rounded-2xl shadow-sm border-t-4 border-indigo-600">
+            <p className="text-indigo-600 text-[10px] font-black uppercase">ค่าแรง 10 ล้อ</p>
+            <p className="text-lg font-bold text-indigo-700">฿{(filteredStats?.driverWage10Wheel || 0).toLocaleString()}</p>
+          </div>
         </div>
 
-
-        {/* --- Charts Section (ของเก่า + ของใหม่) --- */}
+        {/* Chart Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* แนวโน้ม (ของเก่า) */}
+          {/* Bar Chart */}
           <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-700 mb-6 text-sm uppercase">แนวโน้มรายรับ - รายจ่าย</h3>
             <div className="h-[300px]">
@@ -252,48 +270,82 @@ export default function Dashboard() {
                 data={{ 
                   labels: chartLabels, 
                   datasets: [
-                    { label: 'รายรับ', data: chartData.dataRev, backgroundColor: '#10b981', borderRadius: 5 }, 
-                    { label: 'รายจ่าย', data: chartData.dataExp, backgroundColor: '#f43f5e', borderRadius: 5 }
+                    { label: 'รายรับ', data: chartData?.dataRev || [], backgroundColor: '#3b82f6', borderRadius: 5 }, 
+                    { label: 'รายจ่าย', data: chartData?.dataExp || [], backgroundColor: '#ef4444', borderRadius: 5 }
                   ] 
                 }} 
-                options={{ maintainAspectRatio: false }} 
+                options={{ maintainAspectRatio: false, plugins: { legend: { labels: { font: { weight: 'bold' } } } } }} 
               />
             </div>
           </div>
 
-          {/* สัดส่วนรายจ่าย (ของใหม่: ละเอียดขึ้น) */}
+          {/* Doughnut Chart with Percentages */}
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
-            <h3 className="font-bold text-gray-700 mb-8 text-sm uppercase">สัดส่วนค่าใช้จ่าย</h3>
-            <div className="max-w-[250px] mx-auto">
+            <h3 className="font-bold text-gray-700 mb-5 text-lg uppercase">สัดส่วนรายจ่ายบริษัท</h3>
+            <div className="max-w-[280px] mx-auto">
               <Doughnut 
                 data={{ 
-                  labels: ['แก๊ส', 'ทางด่วน', 'ค่าซ่อม', 'ค่าจอด', 'ค่าแรง', 'เบี้ยเลี้ยง'], 
+                  labels: ['แก๊ส', 'ทางด่วน', 'ค่าซ่อม', 'ค่าจอด', 'อื่นๆ', 'ค่าแรง 16%', 'ค่าแรง 10 ล้อ', 'เบี้ยเลี้ยง'], 
                   datasets: [{ 
                     data: [
-                      filteredStats.gas, 
-                      filteredStats.toll, 
-                      filteredStats.repair, 
-                      filteredStats.parking, 
-                      filteredStats.driverWage,
-                      filteredStats.extra
+                      filteredStats?.gas || 0, 
+                      filteredStats?.toll || 0, 
+                      filteredStats?.repair || 0, 
+                      filteredStats?.parking || 0, 
+                      filteredStats?.maintenanceOnly || 0,
+                      filteredStats?.driverWage || 0,
+                      filteredStats?.driverWage10Wheel || 0,
+                      filteredStats?.extra || 0
                     ], 
-                    backgroundColor: ['#f59e0b', // แก๊ส - Amber
-                                      '#0ea5e9', // ทางด่วน - Sky
-                                      '#d946ef', // ค่าซ่อม - Fuchsia
-                                      '#f43f5e', // ค่าจอด - Rose
-                                      '#10b981', // ค่าแรง - Emerald
-                                      '#6366f1'  // เบี้ยเลี้ยง - Indigo
-                                      ],
+                    backgroundColor: ['#f59e0b', '#0ea5e9', '#d946ef', '#f43f5e', '#94a3b8', '#10b981', '#4f46e5', '#f97316'],
                     borderWidth: 0
                   }] 
                 }} 
-                options={{ cutout: '70%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 12 } } } } }}
+                options={{ 
+                  cutout: '70%', 
+                  plugins: { 
+                    legend: { 
+                      position: 'bottom', 
+                      labels: { 
+                        usePointStyle: true, 
+                        font: { size: 12 },
+                        generateLabels: (chart) => {
+                          const data = chart.data;
+                          if (data.labels.length && data.datasets.length) {
+                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            return data.labels.map((label, i) => {
+                              const value = data.datasets[0].data[i];
+                              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                              return {
+                                text: `${label} (${percentage}%)`,
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                index: i
+                              };
+                            });
+                          }
+                          return [];
+                        }
+                      } 
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          const label = context.label || '';
+                          const value = context.parsed || 0;
+                          const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                          return `${label}: ฿${value.toLocaleString()} (${percentage}%)`;
+                        }
+                      }
+                    }
+                  } 
+                }} 
               />
             </div>
           </div>
         </div>
 
-        {/* --- Bottom Section (ของเก่า: เปรียบเทียบทะเบียนรถ & Margin) --- */}
+        {/* Bottom Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
              <h3 className="font-bold text-gray-700 mb-6 text-sm uppercase">เปรียบเทียบผลงานรายทะเบียนรถ</h3>
@@ -311,17 +363,18 @@ export default function Dashboard() {
              </div>
           </div>
           
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
             <h3 className="font-bold text-gray-700 mb-4 text-lg uppercase tracking-widest">อัตรากำไร (Margin)</h3>
             <div className={`text-6xl font-black mb-4 tracking-tighter ${isLoss ? 'text-red-500' : 'text-emerald-600'}`}>
-              {filteredStats.revenue > 0 ? ((netProfit) / filteredStats.revenue * 100).toFixed(1) : 0}%
+              {(filteredStats?.revenue || 0) > 0 ? ((netProfit / filteredStats.revenue) * 100).toFixed(1) : 0}%
             </div>
             <div className="w-full bg-gray-100 h-5 rounded-full overflow-hidden p-1">
               <div 
                 className={`h-full rounded-full transition-all duration-1000 ${isLoss ? 'bg-red-500' : 'bg-emerald-500'}`} 
-                style={{ width: `${Math.min(Math.max(filteredStats.revenue > 0 ? ((netProfit) / filteredStats.revenue * 100) : 0, 0), 100)}%` }}
+                style={{ width: `${Math.min(Math.max((filteredStats?.revenue || 0) > 0 ? ((netProfit / filteredStats.revenue) * 100) : 0, 0), 100)}%` }}
               ></div>
             </div>
+            <p className="text-[10px] text-gray-400 mt-4 uppercase font-bold tracking-widest">Efficiency Indicator</p>
           </div>
         </div>
 
