@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import AddInvoice from './pages/AddInvoice'
 import EditInvoice from './pages/EditInvoice'
 import Dashboard from './pages/Dashboard'
+import CompanyExpense from './pages/CompanyExpense'
 import './App.css'
 
 function TruckSelect() {
@@ -42,6 +43,12 @@ function TruckSelect() {
         >
           📊 ดู Dashboard ภาพรวม
         </button>
+        <button 
+          onClick={() => navigate('/CompanyExpense')}
+          className="w-full mb-6 py-4 bg-rose-400 text-white rounded-lg shadow-lg font-bold text-xl hover:bg-rose-500 hover:scale-105 transition duration-200 flex items-center justify-center gap-2"
+        >
+           ลงค่าใช้จ่ายบริษัท
+        </button>
 
         <h1 className="text-2xl font-bold mb-6 text-center">เลือกรถ</h1>
         <div className="grid grid-cols-1 gap-4 w-full">
@@ -68,6 +75,7 @@ function App() {
       <Route path="/AddInvoice/:truckId" element={<AddInvoice />} />
       <Route path='/EditInvoice/:invoiceId' element={<EditInvoice />}></Route>
       <Route path='/Dashboard' element={<Dashboard />} />
+      <Route path='/CompanyExpense' element={<CompanyExpense />} />
     </Routes>
   )
 }

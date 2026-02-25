@@ -6,6 +6,7 @@ import invoiceDetatailsRoute from './routes/invoiceDetailsRoutes.js'
 import truckRoutes from './routes/truckRoutes.js'
 import customerRoute from './routes/customerRoutes.js'
 import exportExcelRoute from './routes/exportExcelRoutes.js'
+import companyExpenseRoute from './routes/companyExpenseRoutes.js'
 
 dotenv.config()
 
@@ -19,6 +20,7 @@ app.use('/api/invoiceDetails', invoiceDetatailsRoute)
 app.use('/api/trucks', truckRoutes)
 app.use('/api/customer', customerRoute)
 app.use('/api/excel', exportExcelRoute)
+app.use('/api/companyExpense', companyExpenseRoute)
 
 
 app.listen(process.env.PORT, () => {
